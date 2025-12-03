@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import http from 'node:http'
-import { promises as fsPromises } from 'node:fs'
-import fs from 'node:fs'
+import os from 'node:os'
+import fs, { promises as fsPromises } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -327,6 +327,16 @@ function logRequest(req, status, path) {
   console.log(`[${time}] ${req.method} ${path} -> ${status}`)
 }
 
+function getLanAddress() {
+  const nets = os.networkInterfaces()
+  for (const ifaces of Object.values(nets)) {
+    for (const addr of ifaces ?? []) {
+      if (addr && addr.family === 'IPv4' && !addr.internal) return addr.address
+    }
+  }
+  return null
+}
+
 async function main() {
   const args = parseArgs(process.argv)
   try {
@@ -357,7 +367,12 @@ async function main() {
   })
 
   server.listen(args.port, args.host, () => {
-    console.log(`Serving ${path.basename(args.root)} at http://${args.host}:${args.port}`)
+    console.log(`Serving ${path.basename(args.root)}/`)
+    const lanAddress = getLanAddress()
+    console.log(`
+    - Local:    http://${args.host}:${args.port}
+    - Network:  ${(lanAddress ? `http://${lanAddress}:${args.port}` : 'not available')}
+    `)
     if (!args.listing) console.log('Directory listing disabled')
     if (args.spa) console.log('SPA mode enabled')
     if (args.cacheSeconds > 0) console.log(`Cache-Control: max-age=${args.cacheSeconds}`)
