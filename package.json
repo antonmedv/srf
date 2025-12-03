@@ -12,6 +12,7 @@
   "keywords": [
     "server"
   ],
+  "homepage": "https://git.medv.io/srf/",
   "author": "Anton Medvedev <anton@medv.io>",
   "license": "MIT"
 }
