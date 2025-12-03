@@ -127,7 +127,7 @@ function safeJoin(root, requestPath) {
   // Prevent null bytes and normalize
   decoded = decoded.replace(/\0/g, '')
   const resolved = path.resolve(root, '.' + decoded)
-  if (!resolved.startsWith(root)) return null // path traversal
+  if (!resolved.startsWith(root)) return null
   return resolved
 }
 
@@ -164,14 +164,14 @@ async function listDirectory(dirPath, reqPath) {
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<style>html { color-scheme: light dark; font: 16px system-ui; }</style>',
-    `<title>Index of ${escapeHtml(reqPath)}</title>`,
-    `<h1>Index of ${escapeHtml(reqPath)}</h1>`,
+    `<title>Index of ${escapeHtml(decodeURI(reqPath))}</title>`,
+    `<h1>Index of ${escapeHtml(decodeURI(reqPath))}</h1>`,
     '<ul>',
   ]
   if (reqPath !== '/') parts.push(`<li><a href="..">..</a></li>`)
   for (const it of items) {
     const name = it.name + (it.isDirectory() ? '/' : '')
-    const href = encodeURI((reqPath.endsWith('/') ? reqPath : reqPath + '/') + name)
+    const href = reqPath + encodeURI(name)
     parts.push(`<li><a href="${href}">${escapeHtml(name)}</a></li>`)
   }
   parts.push('</ul>')
