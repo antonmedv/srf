@@ -141,7 +141,15 @@ async function fileExists(p) {
 }
 
 function sendError(res, code, msg) {
-  const body = `<!doctype html><meta charset="utf-8"><style>html { color-scheme: light dark; font: 16px system-ui; }</style><title>${code}</title><h1>${code}</h1><p>${msg}</p>`
+  const body = [
+    '<!doctype html>',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<style>html { color-scheme: light dark; font: 16px system-ui; }</style>',
+    `<title>${code}</title>`,
+    `<h1>${code}</h1>`,
+    `<p>${msg}</p>`,
+  ].join('\n')
   res.writeHead(code, {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Length': Buffer.byteLength(body),
@@ -154,6 +162,7 @@ async function listDirectory(dirPath, reqPath) {
   const parts = [
     '<!doctype html>',
     '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<style>html { color-scheme: light dark; font: 16px system-ui; }</style>',
     `<title>Index of ${escapeHtml(reqPath)}</title>`,
     `<h1>Index of ${escapeHtml(reqPath)}</h1>`,
