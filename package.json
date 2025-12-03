@@ -2,7 +2,7 @@
   "name": "srf",
   "description": "A file server",
   "type": "module",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "bin": {
     "srf": "server.js"
   },

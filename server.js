@@ -38,9 +38,9 @@ function parseArgs(argv) {
     } else if (a === '-h' || a === '--help') {
       printHelpAndExit()
     } else if (a === '-v' || a === '--version') {
-      const pkg = { version: '1.0.0' }
+      const pkg = { version: '?' }
       try {
-        const pkgPath = path.join(path.dirname(fileURLToPath(import.meta)), 'package.json')
+        const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'package.json')
         const content = fs.readFileSync(pkgPath, 'utf8')
         Object.assign(pkg, JSON.parse(content))
       } catch {
