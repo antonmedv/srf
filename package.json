@@ -2,7 +2,7 @@
   "name": "srf",
   "description": "A file server",
   "type": "module",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "bin": {
     "srf": "server.js"
   },
@@ -12,7 +12,11 @@
   "keywords": [
     "server"
   ],
-  "homepage": "https://git.medv.io/srf/",
+  "homepage": "https://github.com/antonmedv/srf",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antonmedv/srf.git"
+  },
   "author": "Anton Medvedev <anton@medv.io>",
   "license": "MIT"
 }
