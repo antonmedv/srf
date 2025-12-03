@@ -1,0 +1,17 @@
+{
+  "name": "srf",
+  "description": "A file server",
+  "type": "module",
+  "version": "1.0.0",
+  "bin": {
+    "srf": "server.js"
+  },
+  "files": [
+    "server.js"
+  ],
+  "keywords": [
+    "server"
+  ],
+  "author": "Anton Medvedev <anton@medv.io>",
+  "license": "MIT"
+}
