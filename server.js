@@ -158,6 +158,7 @@ function sendError(res, code, msg) {
 }
 
 async function listDirectory(dirPath, reqPath) {
+  reqPath = reqPath.endsWith('/') ? reqPath : reqPath + '/'
   const items = await readdir(dirPath, { withFileTypes: true })
   const parts = [
     '<!doctype html>',
@@ -315,7 +316,7 @@ async function handlerFactory(root, opts) {
         return
       }
       try {
-        const body = await listDirectory(absPath, reqPath.endsWith('/') ? reqPath : reqPath + '/')
+        const body = await listDirectory(absPath, reqPath)
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Length': Buffer.byteLength(body),
