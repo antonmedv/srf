@@ -172,7 +172,8 @@ async function listDirectory(dirPath, reqPath) {
   if (reqPath !== '/') parts.push(`<li><a href="..">..</a></li>`)
   for (const it of items) {
     const name = it.name + (it.isDirectory() ? '/' : '')
-    const href = reqPath + encodeURI(name)
+    const encodedName = encodeURIComponent(it.name) + (it.isDirectory() ? '/' : '')
+    const href = reqPath + encodedName
     parts.push(`<li><a href="${href}">${escapeHtml(name)}</a></li>`)
   }
   parts.push('</ul>')

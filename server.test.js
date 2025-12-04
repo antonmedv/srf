@@ -198,6 +198,23 @@ test('basic', async (t) => {
     await srv.stop()
   })
 
+  await t.test('directory listing encodes ? in filenames in href', async () => {
+    const dir = await mkTmpDir()
+    const fname = 'file?.txt'
+    await fs.writeFile(path.join(dir, fname), 'QMARK')
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    const res = await req('GET', `${srv.url}/`)
+    assert.equal(res.status, 200)
+    const html = res.body.toString()
+    // Link should percent-encode the question mark as %3F in the href
+    assert.match(html, /<a href="\/file%3F.txt">/)
+    // Visible text should show the original filename
+    assert.match(html, /file\?.txt/)
+    await srv.stop()
+  })
+
   await t.test('directory listing can be disabled', async () => {
     const dir = await mkTmpDir()
     const port = await getFreePort()
@@ -246,6 +263,21 @@ test('basic', async (t) => {
     const res = await req('GET', `${srv.url}/data.binx`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/octet-stream')
+  })
+
+  await t.test('serves a file whose name contains a question mark ("?") when URL-encoded', async () => {
+    const dir = await mkTmpDir()
+    const fname = 'file?.txt'
+    await fs.writeFile(path.join(dir, fname), 'QMARK')
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+    // The '?' must be percent-encoded as %3F in the URL path
+    const res = await req('GET', `${srv.url}/file%3F.txt`)
+    assert.equal(res.status, 200)
+    assert.equal(res.body.toString(), 'QMARK')
+    assert.equal(res.headers['content-type'], 'text/plain; charset=utf-8')
   })
 })
 
