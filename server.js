@@ -413,11 +413,13 @@ async function main() {
   })
 
   server.listen(args.port, args.host, () => {
+    const address = server.address()
+    const boundPort = typeof address === 'object' && address ? address.port : args.port
     console.log(`Serving ${path.basename(args.root)}/`)
     const lanAddress = getLanAddress()
     console.log(`
-    - Local:    http://${args.host}:${args.port}
-    - Network:  ${(lanAddress ? `http://${lanAddress}:${args.port}` : 'not available')}
+    - Local:    http://${args.host}:${boundPort}
+    - Network:  ${(lanAddress ? `http://${lanAddress}:${boundPort}` : 'not available')}
     `)
     if (!args.listing) console.log('Directory listing disabled')
     if (args.spa) console.log('SPA mode enabled')
