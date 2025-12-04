@@ -1,5 +1,8 @@
 # srf
 
+[![test](https://github.com/antonmedv/srf/actions/workflows/test.yaml/badge.svg)](https://github.com/antonmedv/srf/actions/workflows/test.yaml)
+[![version](https://img.shields.io/npm/v/srf)](https://www.npmjs.com/package/srf)
+
 **Serve Really Fast**
 
 A tiny, [dependency-free](https://www.npmjs.com/package/srf?activeTab=dependencies) static file server for Node.js. It
