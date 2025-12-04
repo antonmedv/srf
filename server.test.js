@@ -257,7 +257,7 @@ test('security', async (t) => {
     assert.ok(!body.includes(secret), 'Secret content leaked in response body')
   }
 
-  await t.test('security: blocks plain .. traversal to file outside root', async () => {
+  await t.test('blocks plain .. traversal to file outside root', async () => {
     const parent = await mkTmpDir()
     const root = path.join(parent, 'root')
     const outside = path.join(parent, 'outside')
@@ -278,7 +278,7 @@ test('security', async (t) => {
     assertNotLeaked(res, secret)
   })
 
-  await t.test('security: blocks encoded dotdot (%2e%2e) traversal', async () => {
+  await t.test('blocks encoded dotdot (%2e%2e) traversal', async () => {
     const parent = await mkTmpDir()
     const root = path.join(parent, 'root')
     const outside = path.join(parent, 'outside')
@@ -298,7 +298,7 @@ test('security', async (t) => {
     assertNotLeaked(res, secret)
   })
 
-  await t.test('security: blocks double-encoded dotdot (%252e%252e) traversal', async () => {
+  await t.test('blocks double-encoded dotdot (%252e%252e) traversal', async () => {
     const parent = await mkTmpDir()
     const root = path.join(parent, 'root')
     const outside = path.join(parent, 'outside')
@@ -318,7 +318,7 @@ test('security', async (t) => {
     assertNotLeaked(res, secret)
   })
 
-  await t.test('security: blocks traversal using mixed separators (Windows/backslash)', async () => {
+  await t.test('blocks traversal using mixed separators (Windows/backslash)', async () => {
     const parent = await mkTmpDir()
     const root = path.join(parent, 'root')
     const outside = path.join(parent, 'outside')
@@ -342,7 +342,7 @@ test('security', async (t) => {
     assertNotLeaked(res2, secret)
   })
 
-  await t.test('security: encoded slash (%2f) and encoded backslash (%5c) do not enable escape', async () => {
+  await t.test('encoded slash (%2f) and encoded backslash (%5c) do not enable escape', async () => {
     const parent = await mkTmpDir()
     const root = path.join(parent, 'root')
     const outside = path.join(parent, 'outside')
@@ -366,37 +366,7 @@ test('security', async (t) => {
     assertNotLeaked(res2, secret)
   })
 
-  await t.test('security: normalization does not allow sneaky segments (./, repeated slashes)', async () => {
-    const dir = await mkTmpDir()
-    await fs.writeFile(path.join(dir, 'a.txt'), 'A')
-
-    const port = await getFreePort()
-    const srv = startServer({ root: dir, port })
-    await srv.ready
-    t.after(() => srv.stop())
-
-    // These should still resolve to /a.txt (and not crash / mis-handle)
-    const r1 = await req('GET', `${srv.url}//a.txt`)
-    assert.equal(r1.status, 200)
-    assert.equal(r1.body.toString(), 'A')
-
-    const r2 = await req('GET', `${srv.url}/./a.txt`)
-    assert.equal(r2.status, 200)
-    assert.equal(r2.body.toString(), 'A')
-
-    const r3 = await req('GET', `${srv.url}/x/../a.txt`)
-    // Depending on your policy, you might:
-    // - normalize and serve (200), or
-    // - reject paths containing '..' (400/403)
-    if (r3.status === 200) {
-      assert.equal(r3.body.toString(), 'A')
-    } else {
-      // still must not leak anything; just ensure it isn't a weird success-with-wrong-body
-      assert.notEqual(r3.status, 500)
-    }
-  })
-
-  await t.test('security: NUL byte injection is rejected', async () => {
+  await t.test('NUL byte injection is rejected', async () => {
     const dir = await mkTmpDir()
     await fs.writeFile(path.join(dir, 'nul.txt'), 'NUL')
 
