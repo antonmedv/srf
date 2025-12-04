@@ -47,6 +47,17 @@ Examples:
   srf -p 3000 public      Serve ./public on port 3000
 ```
 
+## Benchmark
+
+| Server      | Requests/sec |
+|-------------|-------------:|
+| srf         |        22104 |
+| http-server |        11504 |
+| serve       |        11479 |
+
+Measured with **wrk** on a **MacBook Air M2**. In this run, **srf is ~2× faster** than `http-server` and `serve` by
+requests/sec.
+
 ## License
 
 [MIT](LICENSE)
