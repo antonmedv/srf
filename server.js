@@ -212,26 +212,41 @@ async function serveFile(req, res, filePath, st, opts) {
   const range = req.headers['range']
   if (range && /^bytes=/.test(range)) {
     const spec = range.replace(/bytes=/, '').split(',')[0].trim()
-    const [s, e] = spec.split('-')
-    if (s === '' && e) {
-      // suffix bytes
+    let valid = false
+    let s, e
+    if (spec.includes('-')) {
+      [s, e] = spec.split('-')
+    }
+
+    if (s === '' && e !== undefined) {
+      // suffix bytes: last N bytes
       const suffix = Number(e)
-      if (!Number.isNaN(suffix)) {
+      if (Number.isFinite(suffix) && suffix > 0) {
         start = Math.max(0, st.size - suffix)
+        end = st.size - 1
+        valid = start <= end
       }
-    } else {
+    } else if (s !== undefined) {
       const sNum = Number(s)
-      const eNum = e ? Number(e) : end
-      if (!Number.isNaN(sNum) && !Number.isNaN(eNum) && sNum <= eNum) {
-        start = Math.min(Math.max(0, sNum), end)
-        end = Math.min(eNum, end)
+      const eNum = e === undefined || e === '' ? (st.size - 1) : Number(e)
+      if (Number.isFinite(sNum) && Number.isFinite(eNum) && sNum <= eNum) {
+        // start must be within the resource size
+        if (sNum < st.size) {
+          start = Math.max(0, sNum)
+          end = Math.min(eNum, st.size - 1)
+          valid = start <= end
+        } else {
+          valid = false
+        }
       }
     }
-    if (start > end) {
+
+    if (!valid) {
       res.writeHead(416, { 'Content-Range': `bytes */${st.size}` })
       res.end()
       return
     }
+
     statusCode = 206
     headers['Content-Range'] = `bytes ${start}-${end}/${st.size}`
   }
