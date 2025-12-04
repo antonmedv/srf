@@ -169,7 +169,6 @@ test('srf', async (t) => {
     const res = await req('GET', `${srv.url}/z.txt`, { Range: 'bytes=10-2' })
     assert.equal(res.status, 416)
     assert.match(String(res.headers['content-range']), /bytes \*\/4/)
-
   })
 
   await t.test('HEAD request to file has no body but has headers', async () => {
@@ -183,7 +182,6 @@ test('srf', async (t) => {
     assert.equal(res.status, 200)
     assert.equal(res.body.length, 0)
     assert.ok(res.headers['content-length'])
-
   })
 
   await t.test('directory listing enabled by default', async () => {
@@ -208,7 +206,6 @@ test('srf', async (t) => {
     t.after(() => srv.stop())
     const res = await req('GET', `${srv.url}/`)
     assert.equal(res.status, 403)
-
   })
 
   await t.test('serves index.html in a directory if present', async () => {
@@ -224,7 +221,6 @@ test('srf', async (t) => {
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'text/html; charset=utf-8')
     assert.equal(res.body.toString(), '<h1>Hello</h1>')
-
   })
 
   await t.test('SPA mode serves index.html for not found paths', async () => {
@@ -238,7 +234,6 @@ test('srf', async (t) => {
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'text/html; charset=utf-8')
     assert.equal(res.body.toString(), '<p>SPA</p>')
-
   })
 
   await t.test('unknown extension served as application/octet-stream', async () => {
@@ -251,6 +246,5 @@ test('srf', async (t) => {
     const res = await req('GET', `${srv.url}/data.binx`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/octet-stream')
-
   })
 })
