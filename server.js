@@ -209,6 +209,25 @@ async function serveFile(req, res, filePath, st, opts) {
     return
   }
 
+  // Special handling for zero-length files
+  if (st.size === 0) {
+    const range = req.headers['range']
+    if (range) {
+      // For empty resources, any range request is unsatisfiable
+      res.writeHead(416, { 'Content-Range': 'bytes */0' })
+      res.end()
+      return
+    }
+    headers['Content-Length'] = 0
+    res.writeHead(200, headers)
+    if (req.method === 'HEAD') {
+      res.end()
+    } else {
+      res.end()
+    }
+    return
+  }
+
   // Range requests
   let start = 0, end = st.size - 1, statusCode = 200
   const range = req.headers['range']

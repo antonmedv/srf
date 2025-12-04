@@ -184,6 +184,39 @@ test('basic', async (t) => {
     assert.ok(res.headers['content-length'])
   })
 
+  await t.test('serves an empty file correctly (GET and HEAD)', async () => {
+    const dir = await mkTmpDir()
+    const p = path.join(dir, 'empty.txt')
+    await fs.writeFile(p, '')
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+    const getRes = await req('GET', `${srv.url}/empty.txt`)
+    assert.equal(getRes.status, 200)
+    assert.equal(getRes.body.length, 0)
+    assert.equal(getRes.headers['content-type'], 'text/plain; charset=utf-8')
+    assert.equal(Number(getRes.headers['content-length']), 0)
+    const headRes = await req('HEAD', `${srv.url}/empty.txt`)
+    assert.equal(headRes.status, 200)
+    assert.equal(headRes.body.length, 0)
+    assert.equal(Number(headRes.headers['content-length']), 0)
+  })
+
+  await t.test('range request on empty file returns 416 with proper header', async () => {
+    const dir = await mkTmpDir()
+    const p = path.join(dir, 'empty.bin')
+    await fs.writeFile(p, '')
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+    const res = await req('GET', `${srv.url}/empty.bin`, { Range: 'bytes=0-0' })
+    assert.equal(res.status, 416)
+    assert.match(String(res.headers['content-range'] || ''), /bytes \*\/0/)
+    assert.equal(res.body.length, 0)
+  })
+
   await t.test('directory listing enabled by default', async () => {
     const dir = await mkTmpDir()
     await fs.writeFile(path.join(dir, 'file.txt'), 'X')
