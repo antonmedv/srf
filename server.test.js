@@ -93,7 +93,7 @@ async function req(method, url, headers = {}, body = null) {
   })
 }
 
-test('srf', async (t) => {
+test('basic', async (t) => {
   await t.test('serves a static file with correct headers', async (t) => {
     const dir = await mkTmpDir()
     const file = path.join(dir, 'hello.txt')
@@ -246,5 +246,168 @@ test('srf', async (t) => {
     const res = await req('GET', `${srv.url}/data.binx`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/octet-stream')
+  })
+})
+
+test('security', async (t) => {
+  function assertNotLeaked(res, secret) {
+    // any deny status is okay, but body must not contain the secret
+    assert.notEqual(res.status, 200, `Expected non-200, got ${res.status}`)
+    const body = res.body.toString('utf8')
+    assert.ok(!body.includes(secret), 'Secret content leaked in response body')
+  }
+
+  await t.test('security: blocks plain .. traversal to file outside root', async () => {
+    const parent = await mkTmpDir()
+    const root = path.join(parent, 'root')
+    const outside = path.join(parent, 'outside')
+    await fs.mkdir(root)
+    await fs.mkdir(outside)
+
+    const secret = 'TOP_SECRET'
+    await fs.writeFile(path.join(outside, 'secret.txt'), secret)
+    await fs.writeFile(path.join(root, 'public.txt'), 'ok')
+
+    const port = await getFreePort()
+    const srv = startServer({ root, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // try to escape root -> ../outside/secret.txt
+    const res = await req('GET', `${srv.url}/../outside/secret.txt`)
+    assertNotLeaked(res, secret)
+  })
+
+  await t.test('security: blocks encoded dotdot (%2e%2e) traversal', async () => {
+    const parent = await mkTmpDir()
+    const root = path.join(parent, 'root')
+    const outside = path.join(parent, 'outside')
+    await fs.mkdir(root)
+    await fs.mkdir(outside)
+
+    const secret = 'TOP_SECRET'
+    await fs.writeFile(path.join(outside, 'secret.txt'), secret)
+
+    const port = await getFreePort()
+    const srv = startServer({ root, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // ../outside/secret.txt but encoded
+    const res = await req('GET', `${srv.url}/%2e%2e/outside/secret.txt`)
+    assertNotLeaked(res, secret)
+  })
+
+  await t.test('security: blocks double-encoded dotdot (%252e%252e) traversal', async () => {
+    const parent = await mkTmpDir()
+    const root = path.join(parent, 'root')
+    const outside = path.join(parent, 'outside')
+    await fs.mkdir(root)
+    await fs.mkdir(outside)
+
+    const secret = 'TOP_SECRET'
+    await fs.writeFile(path.join(outside, 'secret.txt'), secret)
+
+    const port = await getFreePort()
+    const srv = startServer({ root, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // %252e is literal "%2e" after one decode, so this catches servers that decode twice.
+    const res = await req('GET', `${srv.url}/%252e%252e/outside/secret.txt`)
+    assertNotLeaked(res, secret)
+  })
+
+  await t.test('security: blocks traversal using mixed separators (Windows/backslash)', async () => {
+    const parent = await mkTmpDir()
+    const root = path.join(parent, 'root')
+    const outside = path.join(parent, 'outside')
+    await fs.mkdir(root)
+    await fs.mkdir(outside)
+
+    const secret = 'TOP_SECRET'
+    await fs.writeFile(path.join(outside, 'secret.txt'), secret)
+
+    const port = await getFreePort()
+    const srv = startServer({ root, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // Backslash in URL path (some servers treat as separator)
+    const res1 = await req('GET', `${srv.url}/..\\outside\\secret.txt`)
+    assertNotLeaked(res1, secret)
+
+    // Encoded backslash %5c
+    const res2 = await req('GET', `${srv.url}/..%5coutside%5csecret.txt`)
+    assertNotLeaked(res2, secret)
+  })
+
+  await t.test('security: encoded slash (%2f) and encoded backslash (%5c) do not enable escape', async () => {
+    const parent = await mkTmpDir()
+    const root = path.join(parent, 'root')
+    const outside = path.join(parent, 'outside')
+    await fs.mkdir(root)
+    await fs.mkdir(outside)
+
+    const secret = 'TOP_SECRET'
+    await fs.writeFile(path.join(outside, 'secret.txt'), secret)
+
+    const port = await getFreePort()
+    const srv = startServer({ root, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // If your server decodes %2f inside a segment, it might create new path segments
+    const res1 = await req('GET', `${srv.url}/..%2foutside%2fsecret.txt`)
+    assertNotLeaked(res1, secret)
+
+    // Double-encoded slash: %252f becomes %2f after one decode
+    const res2 = await req('GET', `${srv.url}/..%252foutside%252fsecret.txt`)
+    assertNotLeaked(res2, secret)
+  })
+
+  await t.test('security: normalization does not allow sneaky segments (./, repeated slashes)', async () => {
+    const dir = await mkTmpDir()
+    await fs.writeFile(path.join(dir, 'a.txt'), 'A')
+
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // These should still resolve to /a.txt (and not crash / mis-handle)
+    const r1 = await req('GET', `${srv.url}//a.txt`)
+    assert.equal(r1.status, 200)
+    assert.equal(r1.body.toString(), 'A')
+
+    const r2 = await req('GET', `${srv.url}/./a.txt`)
+    assert.equal(r2.status, 200)
+    assert.equal(r2.body.toString(), 'A')
+
+    const r3 = await req('GET', `${srv.url}/x/../a.txt`)
+    // Depending on your policy, you might:
+    // - normalize and serve (200), or
+    // - reject paths containing '..' (400/403)
+    if (r3.status === 200) {
+      assert.equal(r3.body.toString(), 'A')
+    } else {
+      // still must not leak anything; just ensure it isn't a weird success-with-wrong-body
+      assert.notEqual(r3.status, 500)
+    }
+  })
+
+  await t.test('security: NUL byte injection is rejected', async () => {
+    const dir = await mkTmpDir()
+    await fs.writeFile(path.join(dir, 'nul.txt'), 'NUL')
+
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+
+    // %00 historically causes path truncation issues in some stacks
+    const res = await req('GET', `${srv.url}/nul.txt%00.png`)
+    // should not serve nul.txt
+    assert.notEqual(res.status, 200)
   })
 })
