@@ -15,6 +15,7 @@ function parseArgs(argv) {
     listing: true,
     spa: false,
     cacheSeconds: 0,
+    gz: false,
   }
   const rest = []
   for (let i = 2; i < argv.length; i++) {
