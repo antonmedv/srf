@@ -141,6 +141,43 @@ test('basic', async (t) => {
     assert.equal(second.status, 304)
   })
 
+  await t.test('If-Modified-Since comparison is rounded to seconds (equal -> 304)', async () => {
+    const dir = await mkTmpDir()
+    const p = path.join(dir, 'c.txt')
+    await fs.writeFile(p, 'C')
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+    const first = await req('GET', `${srv.url}/c.txt`)
+    assert.equal(first.status, 200)
+    const ims = first.headers['last-modified']
+    // No changes to the file; IMS equal to Last-Modified must yield 304
+    const second = await req('GET', `${srv.url}/c.txt`, { 'If-Modified-Since': ims })
+    assert.equal(second.status, 304)
+  })
+
+  await t.test('If-None-Match takes precedence over If-Modified-Since', async () => {
+    const dir = await mkTmpDir()
+    const p = path.join(dir, 'd.txt')
+    await fs.writeFile(p, 'D')
+    const port = await getFreePort()
+    const srv = startServer({ root: dir, port })
+    await srv.ready
+    t.after(() => srv.stop())
+    const first = await req('GET', `${srv.url}/d.txt`)
+    assert.equal(first.status, 200)
+    const lastMod = first.headers['last-modified']
+    const etag = first.headers['etag']
+    // Mismatch ETag with matching IMS: since INM is present but doesn't match, IMS should be ignored -> 200
+    const mismatchEtag = 'W/"deadbeef-0"'
+    const res1 = await req('GET', `${srv.url}/d.txt`, { 'If-None-Match': mismatchEtag, 'If-Modified-Since': lastMod })
+    assert.equal(res1.status, 200)
+    // Matching ETag should return 304 regardless of IMS
+    const res2 = await req('GET', `${srv.url}/d.txt`, { 'If-None-Match': etag, 'If-Modified-Since': new Date(0).toUTCString() })
+    assert.equal(res2.status, 304)
+  })
+
   await t.test('range requests: partial and suffix bytes', async () => {
     const dir = await mkTmpDir()
     const p = path.join(dir, 'r.txt')

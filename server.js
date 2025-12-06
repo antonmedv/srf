@@ -203,10 +203,25 @@ async function serveFile(req, res, filePath, st, opts) {
   // Conditional requests
   const inm = req.headers['if-none-match']
   const ims = req.headers['if-modified-since']
-  if ((inm && inm === etag) || (ims && new Date(ims).getTime() >= st.mtimeMs)) {
-    res.writeHead(304, headers)
-    res.end()
-    return
+  // ETag has precedence over If-Modified-Since for GET/HEAD requests
+  if (inm) {
+    if (inm === etag) {
+      res.writeHead(304, headers)
+      res.end()
+      return
+    }
+  } else if (ims) {
+    // HTTP dates are 1-second resolution; compare at seconds precision
+    const imsMs = Date.parse(ims)
+    if (Number.isFinite(imsMs)) {
+      const imsSec = Math.floor(imsMs / 1000)
+      const mtimeSec = Math.floor(st.mtimeMs / 1000)
+      if (imsSec >= mtimeSec) {
+        res.writeHead(304, headers)
+        res.end()
+        return
+      }
+    }
   }
 
   // Special handling for zero-length files
@@ -272,8 +287,7 @@ async function serveFile(req, res, filePath, st, opts) {
     headers['Content-Range'] = `bytes ${start}-${end}/${st.size}`
   }
 
-  const contentLength = end - start + 1
-  headers['Content-Length'] = contentLength
+  headers['Content-Length'] = end - start + 1
 
   res.writeHead(statusCode, headers)
   if (req.method === 'HEAD') {
