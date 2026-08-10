@@ -1,3 +1,5 @@
+
+
 # srf
 
 [![test](https://github.com/antonmedv/srf/actions/workflows/test.yaml/badge.svg)](https://github.com/antonmedv/srf/actions/workflows/test.yaml)
@@ -25,7 +27,7 @@ npm i -g srf
 ```
 
 ```sh
-npx srf
+srf
 ```
 
 ## Usage
